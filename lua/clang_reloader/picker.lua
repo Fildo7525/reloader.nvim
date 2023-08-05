@@ -1,8 +1,8 @@
 local pickers = require "telescope.pickers"
-local conf = require "telescope.config" .values
+local conf = require "telescope.config".values
 
-local telescope_reload_mapping = require("telescope._extensions.reloader.mappings")
-local telecsope_reload_finder = require("telescope._extensions.reloader.finder")
+local telescope_reload_mapping = require("clang_reloader.mappings")
+local telecsope_reload_finder = require("clang_reloader.finder")
 
 local M = {}
 

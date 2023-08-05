@@ -4,7 +4,7 @@ local actions = require "telescope.actions"
 local action_state = require "telescope.actions.state"
 local lspconfig = require "lspconfig"
 
-local config = require("telescope._extentions.reloader.config")
+local config = require("clang_reloader.config")
 
 local function table_size(table)
 	local size = 0
@@ -42,7 +42,8 @@ function M.attach_mappings(prompt_bufnr)
 
 		local clangConfig = require("usr.lsp.settings.clangd");
 		clangConfig.init_options = {compilationDatabasePath = selection[1]}
-		clangConfig = vim.tbl_deep_extend("force", clangConfig, config.options)
+		vim.print(config)
+		clangConfig = vim.tbl_deep_extend("force", clangConfig, config.opts.options)
 		lspconfig['clangd'].setup(clangConfig)
 
 		vim.lsp.start_client(lspconfig['clangd'])

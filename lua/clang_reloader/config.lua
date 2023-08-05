@@ -12,11 +12,11 @@ M.opts = {
 
 function M.setup(options)
 	options = options or {}
-	if #options.directories > 0 then
+	if options.directories and #options.directories > 0 then
 		M.opts.directories = options.directories
 	end
 
-	M.opts.options = options.options
+	M.opts.options = options.options or M.opts.options
 end
 
 return M

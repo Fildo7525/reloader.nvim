@@ -2,7 +2,7 @@ local M = {}
 
 local finders = require "telescope.finders"
 
-local telescop_reload_config = require("telescope._extensions.reloader.config")
+local telescop_reload_config = require("clang_reloader.config").opts
 
 local function merge_tables(lhs, rhs)
 	local copy = lhs
@@ -40,7 +40,7 @@ function M.finder()
 	current_src_dir = merge_tables(current_src_dir, find_build_dirs("."))
 
 	return finders.new_table {
-		results = merge_tables(current_src_dir, telescop_reload_config.config.directories),
+		results = merge_tables(current_src_dir, telescop_reload_config.directories),
 	}
 end
 

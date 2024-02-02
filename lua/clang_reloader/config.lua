@@ -2,7 +2,7 @@ local M = {}
 
 M.opts = {
 	directories = {
-		".",
+		vim.fn.getcwd(),
 	},
 	options = {
 		on_attach = require("usr.lsp.handlers").on_attach,

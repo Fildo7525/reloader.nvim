@@ -4,6 +4,10 @@ local finders = require "telescope.finders"
 
 local telescop_reload_config = require("clang_reloader.config").opts
 
+--- Merges two tables together. Copyies from the second table are ignored.
+---@param lhs table The first ttable to be merged.
+---@param rhs table The second table to be merged, the copyies of the already existing values will be ignored.
+---@return table Retruns a new table with the merged values.
 local function merge_tables(lhs, rhs)
 	local copy = lhs
 	for _, value in ipairs(rhs) do

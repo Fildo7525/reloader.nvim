@@ -1,6 +1,7 @@
 local M = {}
 
 local finders = require "telescope.finders"
+local Path = require "plenary.path"
 
 local telescop_reload_config = require("clang_reloader.config").opts
 
@@ -39,7 +40,8 @@ local function find_build_dirs(directory)
 end
 
 function M.finder()
-	local current_src_dir = { vim.lsp.get_active_clients({name="clangd"})[1].config.init_options.compilationDatabasePath }
+	local current_src_dir = { vim.lsp.get_clients({name="clangd"})[1].config.init_options.compilationDatabasePath }
+
 	current_src_dir = merge_tables(current_src_dir, find_build_dirs(vim.fn.getcwd()))
 
 	return finders.new_table {

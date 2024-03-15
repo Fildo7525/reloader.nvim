@@ -16,7 +16,6 @@ local function table_size(table)
 	return size
 end
 
-
 --- Terminates all clients that have no buffers attached to it.
 function M.terminate_detached_clients()
 	local clients = vim.lsp.get_active_clients()
@@ -26,6 +25,28 @@ function M.terminate_detached_clients()
 			value.rpc.terminate()
 		end
 	end
+end
+
+--- Parses the inputed compile commands file for the query drivers.
+---@param file string The file to be parsed.
+---@return string The query drivers to be added to clangd configuration.
+function M.get_query_drivers(file)
+	local prefix = "--query-driver="
+	local drivers = {}
+
+	local pfile = io.popen("jq -r '.[].command | split(\" \") | .[0]' " .. file .." | sort | uniq")
+	if pfile == nil then
+		return ""
+	end
+
+	for compiler in pfile:lines() do
+		if compiler:len() ~= 0 then
+			table.insert(drivers, compiler)
+		end
+	end
+	pfile:close()
+
+	return prefix .. table.concat(drivers, ",")
 end
 
 function M.attach_mappings(prompt_bufnr)
@@ -41,8 +62,14 @@ function M.attach_mappings(prompt_bufnr)
 		vim.lsp.stop_client(client, true)
 
 		local clangConfig = require("usr.lsp.settings.clangd");
+
+		-- Setup the compilation database path
 		clangConfig.init_options = {compilationDatabasePath = selection[1]}
-		vim.print(config)
+
+		-- Setup the query drivers
+		table.insert(clangConfig.cmd, M.get_query_drivers(selection[1].."/compile_commands.json"))
+
+		-- Update the configuration with the user configuration
 		clangConfig = vim.tbl_deep_extend("force", clangConfig, config.opts.options)
 		lspconfig['clangd'].setup(clangConfig)
 

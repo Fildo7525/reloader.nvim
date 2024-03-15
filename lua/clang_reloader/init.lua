@@ -4,4 +4,7 @@ local M = {
 	config = require('clang_reloader.config').opts,
 }
 
+-- Setup autocommands
+require("clang_reloader.autocommands")
+
 return M

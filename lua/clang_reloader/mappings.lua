@@ -18,7 +18,7 @@ end
 
 
 --- Terminates all clients that have no buffers attached to it.
-local function terminate_detached_clients()
+function M.terminate_detached_clients()
 	local clients = vim.lsp.get_active_clients()
 
 	for _, value in ipairs(clients) do
@@ -48,7 +48,7 @@ function M.attach_mappings(prompt_bufnr)
 
 		vim.lsp.start_client(lspconfig['clangd'])
 		-- Does not work in here. However, when you call it separately, it works.
-		terminate_detached_clients()
+		M.terminate_detached_clients()
 	end)
 	return true
 end

@@ -2,6 +2,7 @@ local M = {}
 
 M.opts = {
 	config = require("usr.lsp.settings.clangd"),
+	max_depth = 2,
 	directories = {
 		vim.fn.getcwd(),
 	},

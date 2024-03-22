@@ -25,7 +25,12 @@ end
 local function find_build_dirs(directory)
 	local i, t, popen = 0, {}, io.popen
 
-	local pfile = popen("find " .. directory .. " -maxdepth 2 -name 'compile_commands.json' -type f")
+	local max_depth = ""
+	if telescop_reload_config.max_depth ~= -1 then
+		max_depth = "-maxdepth " .. tostring(telescop_reload_config.max_depth)
+	end
+
+	local pfile = popen("find " .. directory .. " " .. max_depth .. "  -name 'compile_commands.json' -type f")
 	if pfile == nil then
 		return t
 	end

@@ -64,7 +64,9 @@ function M.attach_mappings(prompt_bufnr)
 		local clangConfig = config.opts.config;
 
 		-- Setup the compilation database path
+		selection[1] = selection[1]:gsub("%.%.%.", vim.fn.getcwd())
 		clangConfig.init_options = {compilationDatabasePath = selection[1]}
+		print("Chosen selection: " .. selection[1])
 
 		-- Setup the query drivers
 		table.insert(clangConfig.cmd, M.get_query_drivers(selection[1].."/compile_commands.json"))

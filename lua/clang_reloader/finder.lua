@@ -31,8 +31,13 @@ local function find_build_dirs(directory)
 	end
 
 	for filename in pfile:lines() do
-		i = i + 1
-		t[i] = filename:gsub("/compile_commands.json", "")
+		filename = filename:gsub(directory, "")
+
+		if #filename ~= 0 then
+			i = i + 1
+			t[i] = filename:gsub("/compile_commands.json", "")
+			t[i] = t[i]:gsub("^/", ".../")
+		end
 	end
 	pfile:close()
 
@@ -41,6 +46,7 @@ end
 
 function M.finder()
 	local current_src_dir = { vim.lsp.get_clients({name="clangd"})[1].config.init_options.compilationDatabasePath }
+	current_src_dir[1] = current_src_dir[1]:gsub(vim.fn.getcwd(), "...")
 
 	current_src_dir = merge_tables(current_src_dir, find_build_dirs(vim.fn.getcwd()))
 

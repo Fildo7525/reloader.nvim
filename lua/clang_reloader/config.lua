@@ -1,6 +1,7 @@
 local M = {}
 
 M.opts = {
+	config = require("usr.lsp.settings.clangd"),
 	directories = {
 		vim.fn.getcwd(),
 	},

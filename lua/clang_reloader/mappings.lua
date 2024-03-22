@@ -61,7 +61,7 @@ function M.attach_mappings(prompt_bufnr)
 
 		vim.lsp.stop_client(client, true)
 
-		local clangConfig = require("usr.lsp.settings.clangd");
+		local clangConfig = config.opts.config;
 
 		-- Setup the compilation database path
 		clangConfig.init_options = {compilationDatabasePath = selection[1]}

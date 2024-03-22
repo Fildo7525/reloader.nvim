@@ -4,6 +4,7 @@ M.opts = {
 	directories = {
 		vim.fn.getcwd(),
 	},
+	detect_on_startup = true,
 	options = {
 		on_attach = require("usr.lsp.handlers").on_attach,
 		capabilities = require("usr.lsp.handlers").capabilities,

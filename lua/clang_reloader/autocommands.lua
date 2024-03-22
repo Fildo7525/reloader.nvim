@@ -1,3 +1,5 @@
+local config = require("clang_reloader.config")
+
 --- Check if a file or directory exists in this path.
 ---@param file string The path to check.
 ---@return boolean Returns true if the file or directory exists, false otherwise.
@@ -24,18 +26,20 @@ local id = vim.api.nvim_create_augroup("reloader.nvim", {
 	clear = true,
 })
 
-vim.api.nvim_create_autocmd({ "LspAttach" }, {
-	callback = function()
-		local clients = vim.lsp.get_clients({name= "clangd"})
-		if #clients ~= 1 then
-			return;
-		end
+if config.opts.detect_on_startup then
+	vim.api.nvim_create_autocmd({ "LspAttach" }, {
+		callback = function()
+			local clients = vim.lsp.get_clients({name= "clangd"})
+			if #clients ~= 1 then
+				return;
+			end
 
-		local path = clients[1].config.init_options.compilationDatabasePath
-		vim.print(path .. " " .. tostring(isdir(path)))
-		if not isdir(path) then
-			require('clang_reloader.picker').reload()
-		end
-	end,
-	group = id,
-})
+			local path = clients[1].config.init_options.compilationDatabasePath
+			vim.print(path .. " " .. tostring(isdir(path)))
+			if not isdir(path) then
+				require('clang_reloader.picker').reload()
+			end
+		end,
+		group = id,
+	})
+end

@@ -29,7 +29,7 @@ end
 
 --- Parses the inputed compile commands file for the query drivers.
 ---@param file string The file to be parsed.
----@return string The query drivers to be added to clangd configuration.
+---@return string|nil The query drivers to be added to clangd configuration.
 function M.get_query_drivers(file)
 	local prefix = "--query-driver="
 	local drivers = {}
@@ -40,14 +40,14 @@ function M.get_query_drivers(file)
 	end
 
 	for compiler in pfile:lines() do
-		if compiler:len() ~= 0 and compiler ~= "/usr/bin/c++" then
+		if compiler:len() ~= 0 and not (compiler == "/usr/bin/c++" or compiler == "/usr/bin/gcc") then
 			table.insert(drivers, compiler)
 		end
 	end
 	pfile:close()
 
 	if #drivers == 0 then
-		return ""
+		return nil
 	end
 
 	return prefix .. table.concat(drivers, ",")
@@ -72,7 +72,10 @@ function M.attach_mappings(prompt_bufnr)
 		clangConfig.init_options = {compilationDatabasePath = selection[1]}
 
 		-- Setup the query drivers
-		table.insert(clangConfig.cmd, M.get_query_drivers(selection[1].."/compile_commands.json"))
+		local drivers = M.get_query_drivers(selection[1].."/compile_commands.json")
+		if drivers then
+			table.insert(clangConfig.cmd, drivers)
+		end
 
 		-- Update the configuration with the user configuration
 		clangConfig = vim.tbl_deep_extend("force", clangConfig, config.opts.options)

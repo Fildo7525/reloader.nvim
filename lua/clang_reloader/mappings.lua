@@ -18,7 +18,7 @@ end
 
 --- Terminates all clients that have no buffers attached to it.
 function M.terminate_detached_clients()
-	local clients = vim.lsp.get_active_clients()
+	local clients = vim.lsp.get_clients()
 
 	for _, value in ipairs(clients) do
 		if table_size(value.attached_buffers) == 0 then
@@ -57,7 +57,7 @@ function M.attach_mappings(prompt_bufnr)
 	actions.select_default:replace(function()
 		actions.close(prompt_bufnr)
 		local selection = action_state.get_selected_entry()
-		local client = vim.lsp.get_active_clients({name = "clangd"})
+		local client = vim.lsp.get_clients({name = "clangd"})
 		if #client == 0 then
 			vim.notify("The clangd server is not running.", vim.log.levels.ERROR)
 			return

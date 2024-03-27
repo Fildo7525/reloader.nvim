@@ -40,11 +40,15 @@ function M.get_query_drivers(file)
 	end
 
 	for compiler in pfile:lines() do
-		if compiler:len() ~= 0 then
+		if compiler:len() ~= 0 and compiler ~= "/usr/bin/c++" then
 			table.insert(drivers, compiler)
 		end
 	end
 	pfile:close()
+
+	if #drivers == 0 then
+		return ""
+	end
 
 	return prefix .. table.concat(drivers, ",")
 end
@@ -59,14 +63,13 @@ function M.attach_mappings(prompt_bufnr)
 			return
 		end
 
-		vim.lsp.stop_client(client, true)
+		vim.lsp.stop_client(client[1], true)
 
 		local clangConfig = config.opts.config;
 
 		-- Setup the compilation database path
 		selection[1] = selection[1]:gsub("%.%.%.", vim.fn.getcwd())
 		clangConfig.init_options = {compilationDatabasePath = selection[1]}
-		print("Chosen selection: " .. selection[1])
 
 		-- Setup the query drivers
 		table.insert(clangConfig.cmd, M.get_query_drivers(selection[1].."/compile_commands.json"))

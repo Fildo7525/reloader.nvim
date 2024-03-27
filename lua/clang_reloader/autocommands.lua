@@ -35,7 +35,7 @@ if config.opts.detect_on_startup then
 			end
 
 			local path = clients[1].config.init_options.compilationDatabasePath
-			vim.print(path .. " " .. tostring(isdir(path)))
+
 			if not isdir(path) then
 				require('clang_reloader.picker').reload()
 			end

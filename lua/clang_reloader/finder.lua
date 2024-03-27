@@ -2,6 +2,7 @@ local M = {}
 
 local finders = require "telescope.finders"
 local Path = require "plenary.path"
+local lspconfig = require "lspconfig"
 
 local telescop_reload_config = require("clang_reloader.config").opts
 
@@ -36,12 +37,17 @@ local function find_build_dirs(directory)
 	end
 
 	for filename in pfile:lines() do
-		filename = filename:gsub(directory, "")
+		if telescop_reload_config.shorten_paths then
+			filename = filename:gsub(directory, "")
+		end
 
 		if #filename ~= 0 then
 			i = i + 1
 			t[i] = filename:gsub("/compile_commands.json", "")
-			t[i] = t[i]:gsub("^/", ".../")
+
+			if telescop_reload_config.shorten_paths then
+				t[i] = t[i]:gsub("^/", ".../")
+			end
 		end
 	end
 	pfile:close()
@@ -50,8 +56,18 @@ local function find_build_dirs(directory)
 end
 
 function M.finder()
-	local current_src_dir = { vim.lsp.get_clients({name="clangd"})[1].config.init_options.compilationDatabasePath }
-	current_src_dir[1] = current_src_dir[1]:gsub(vim.fn.getcwd(), "...")
+	local client = vim.lsp.get_clients({name="clangd"})[1]
+	local current_src_dir = {}
+
+	if not client or not client.config or not client.config.init_options then
+		vim.api.nvim_err_writeln("No clangd client found.")
+	else
+		current_src_dir = { vim.lsp.get_clients({name="clangd"})[1].config.init_options.compilationDatabasePath }
+	end
+
+	if telescop_reload_config.shorten_paths then
+		current_src_dir[1] = current_src_dir[1]:gsub(vim.fn.getcwd(), "...")
+	end
 
 	current_src_dir = merge_tables(current_src_dir, find_build_dirs(vim.fn.getcwd()))
 

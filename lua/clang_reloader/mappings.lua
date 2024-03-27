@@ -1,4 +1,5 @@
 local M = {}
+M.timer = nil
 
 local actions = require "telescope.actions"
 local action_state = require "telescope.actions.state"
@@ -22,9 +23,12 @@ function M.terminate_detached_clients()
 
 	for _, value in ipairs(clients) do
 		if table_size(value.attached_buffers) == 0 then
+			value.stop()
 			value.rpc.terminate()
 		end
 	end
+
+	M.timer = nil
 end
 
 --- Parses the inputed compile commands file for the query drivers.
@@ -63,8 +67,6 @@ function M.attach_mappings(prompt_bufnr)
 			return
 		end
 
-		vim.lsp.stop_client(client[1], true)
-
 		local clangConfig = config.opts.config;
 
 		-- Setup the compilation database path
@@ -82,8 +84,9 @@ function M.attach_mappings(prompt_bufnr)
 		lspconfig['clangd'].setup(clangConfig)
 
 		vim.lsp.start_client(lspconfig['clangd'])
-		-- Does not work in here. However, when you call it separately, it works.
-		M.terminate_detached_clients()
+
+		-- Terminate all clients that have no buffers attached to it.
+		M.timer = vim.fn.timer_start(500, M.terminate_detached_clients, {repeats = 1})
 	end)
 	return true
 end

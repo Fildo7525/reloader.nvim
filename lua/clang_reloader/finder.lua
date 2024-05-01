@@ -27,7 +27,7 @@ local function find_build_dirs(directory)
 	local i, t, popen = 0, {}, io.popen
 
 	local max_depth = ""
-	if telescop_reload_config.max_depth ~= -1 then
+	if telescop_reload_config.max_depth >= 0 then
 		max_depth = "-maxdepth " .. tostring(telescop_reload_config.max_depth)
 	end
 

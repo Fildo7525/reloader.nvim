@@ -1,11 +1,13 @@
+local conf = require('clang_reloader.config').opts
+
 local M = {
 	setup = require('clang_reloader.config').setup,
 	picker = require('clang_reloader.picker').reload,
-	config = require('clang_reloader.config').opts,
+	config = conf.opts,
 }
 
 -- Setup autocommands
-if vim.bo.filetype == "cpp" then
+if conf.enable_autocommands then
 	require("clang_reloader.autocommands")
 end
 

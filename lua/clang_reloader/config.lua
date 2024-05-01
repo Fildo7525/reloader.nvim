@@ -8,6 +8,7 @@ M.opts = {
 		vim.fn.getcwd(),
 	},
 	detect_on_startup = true,
+	enable_autocommands = true,
 	options = {
 		on_attach = require("usr.lsp.handlers").on_attach,
 		capabilities = require("usr.lsp.handlers").capabilities,

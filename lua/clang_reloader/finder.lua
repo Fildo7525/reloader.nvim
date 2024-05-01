@@ -1,8 +1,6 @@
 local M = {}
 
 local finders = require "telescope.finders"
-local Path = require "plenary.path"
-local lspconfig = require "lspconfig"
 
 local telescop_reload_config = require("clang_reloader.config").opts
 

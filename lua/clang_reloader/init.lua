@@ -5,6 +5,8 @@ local M = {
 }
 
 -- Setup autocommands
-require("clang_reloader.autocommands")
+if vim.bo.filetype == "cpp" then
+	require("clang_reloader.autocommands")
+end
 
 return M

@@ -2,7 +2,7 @@ local M = {}
 
 local finders = require "telescope.finders"
 
-local telescop_reload_config = require("clang_reloader.config").opts
+local config = require("clang_reloader.config").opts
 
 --- Merges two tables together. Copyies from the second table are ignored.
 ---@param lhs table The first ttable to be merged.
@@ -25,8 +25,8 @@ local function find_build_dirs(directory)
 	local i, t, popen = 0, {}, io.popen
 
 	local max_depth = ""
-	if telescop_reload_config.max_depth >= 0 then
-		max_depth = "-maxdepth " .. tostring(telescop_reload_config.max_depth)
+	if config.max_depth >= 0 then
+		max_depth = "-maxdepth " .. tostring(config.max_depth)
 	end
 
 	local pfile = popen("find " .. directory .. " " .. max_depth .. "  -name 'compile_commands.json' -type f")
@@ -35,7 +35,7 @@ local function find_build_dirs(directory)
 	end
 
 	for filename in pfile:lines() do
-		if telescop_reload_config.shorten_paths then
+		if config.shorten_paths then
 			filename = filename:gsub(directory, "")
 		end
 
@@ -43,7 +43,7 @@ local function find_build_dirs(directory)
 			i = i + 1
 			t[i] = filename:gsub("/compile_commands.json", "")
 
-			if telescop_reload_config.shorten_paths then
+			if config.shorten_paths then
 				t[i] = t[i]:gsub("^/", ".../")
 			end
 		end
@@ -63,7 +63,7 @@ function M.finder()
 		current_src_dir = { vim.lsp.get_clients({name="clangd"})[1].config.init_options.compilationDatabasePath }
 	end
 
-	if telescop_reload_config.shorten_paths then
+	if config.shorten_paths then
 		current_src_dir[1] = current_src_dir[1]:gsub(vim.fn.getcwd(), "...")
 	end
 

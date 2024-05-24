@@ -68,9 +68,10 @@ function M.finder()
 	end
 
 	current_src_dir = merge_tables(current_src_dir, find_build_dirs(vim.fn.getcwd()))
+	current_src_dir = merge_tables(current_src_dir, config.directories)
 
 	return finders.new_table {
-		results = merge_tables(current_src_dir, telescop_reload_config.directories),
+		results = merge_tables(current_src_dir, {config.custom_prompt})
 	}
 end
 

@@ -20,6 +20,8 @@ M.opts = {
 		on_attach = require("usr.lsp.handlers").on_attach,
 		capabilities = require("usr.lsp.handlers").capabilities,
 	},
+
+	custom_prompt = "+ Supply custom path",
 }
 
 function M.setup(options)

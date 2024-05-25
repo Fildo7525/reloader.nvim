@@ -64,7 +64,7 @@ local function handle_direct_choise(selection)
 		selection = selection:gsub("%.%.%.", vim.fn.getcwd())
 		clangConfig.init_options = {compilationDatabasePath = selection}
 
-		if string.match(clangConfig.cmd[#clangConfig.cmd], "^--query-driver%S+") ~= nil then
+		if string.match(clangConfig.cmd[#clangConfig.cmd], "--query[-]driver%S+") ~= nil then
 			table.remove(clangConfig.cmd, #clangConfig.cmd)
 		end
 

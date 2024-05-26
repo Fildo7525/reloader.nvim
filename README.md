@@ -1,5 +1,7 @@
 # reloader.nvim
 
+> :warning: This plugin is still in development. If you find any bug please do not hesitate to create an issue of PR
+
 reloader.nvim is a ftplugin extension for telescope. This plugin can alter the clangd lsp
 by changing the *compilationDatabasePath*. Thus, you won't have to change the config
 and restart the project in neovim.

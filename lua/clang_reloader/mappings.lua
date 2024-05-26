@@ -69,6 +69,9 @@ local function handle_direct_choise(selection)
 		end
 
 		-- Setup the query drivers
+		if selection:sub(#selection) == "/" then
+			selection = selection:sub(1, #selection - 1)
+		end
 		local drivers = M.get_query_drivers(selection.."/compile_commands.json")
 		if drivers then
 			table.insert(clangConfig.cmd, drivers)

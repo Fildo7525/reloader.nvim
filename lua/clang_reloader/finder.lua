@@ -53,6 +53,15 @@ local function find_build_dirs(directory)
 	return t
 end
 
+--- This encapsulates the current client api from nvim.
+local function get_client()
+	if vim.version().minor == 11 then
+		return vim.lsp.get_clients({name="clangd"})[1]
+	else
+		return vim.lsp.get_active_clients({name="clangd"})[1]
+	end
+end
+
 --- Finder supplied to the telescope plugin as a custom picker.
 ---@return table Table of directories to be used as a prompt.
 function M.finder()
@@ -63,7 +72,7 @@ function M.finder()
 	if not client or not client.config or not client.config.init_options then
 		vim.api.nvim_err_writeln("No clangd client found.")
 	else
-		current_src_dir = { vim.lsp.get_clients({name="clangd"})[1].config.init_options.compilationDatabasePath }
+		current_src_dir = { get_client().config.init_options.compilationDatabasePath }
 	end
 
 	if config.shorten_paths then

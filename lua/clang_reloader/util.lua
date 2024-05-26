@@ -16,6 +16,17 @@ function M.get_client()
 	return M.get_clients()[1]
 end
 
+function M.shorten_path(path)
+	return path:gsub(vim.fn.getcwd() .. "/", ".../")
+end
+
+function M.shorten_paths(paths)
+	for i, v in ipairs(paths) do
+		paths[i] = M.shorten_path(v)
+	end
+	return paths
+end
+
 --- Merges two tables together. Copies from the second table are ignored.
 ---@param lhs table The first table to be merged.
 ---@param rhs table The second table to be merged, the copies of the already existing values will be ignored.

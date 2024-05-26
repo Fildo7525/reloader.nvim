@@ -55,14 +55,13 @@ function M.finder()
 	end
 
 	if config.shorten_paths then
-		current_src_dir[1] = current_src_dir[1]:gsub(vim.fn.getcwd(), "...")
+		current_src_dir[1] = util.shorten_path(current_src_dir[1])
 	end
 
 	current_src_dir = util.merge_tables(current_src_dir, find_build_dirs(vim.fn.getcwd()))
-	current_src_dir = util.merge_tables(current_src_dir, config.directories)
 
 	return finders.new_table {
-		results = util.merge_tables(current_src_dir, {config.custom_prompt})
+		results = util.merge_tables(current_src_dir, {unpack(util.shorten_paths(config.directories)), config.custom_prompt})
 	}
 end
 

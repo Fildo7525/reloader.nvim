@@ -22,6 +22,14 @@ M.opts = {
 	},
 
 	custom_prompt = "+ Supply custom path",
+
+	valid_compilers = {
+		"clang",
+		"clang++",
+		"gcc",
+		"g++",
+		"nvcc",
+	},
 }
 
 function M.setup(options)

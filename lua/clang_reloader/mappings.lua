@@ -31,26 +31,70 @@ function M.terminate_detached_clients()
 	M.timer = nil
 end
 
+--- Check if a supplied argument is a cross compiler.
+---@param arg string The argument to be checked.
+---@return boolean True if the argument is a cross compiler, false otherwise.
+function M.is_cross_compiler(arg)
+	if arg:len() == 0 then
+		return false
+	end
+
+	local compiler = arg:match("/([^/]+)$")
+	if compiler == nil then
+		return false
+	end
+
+	for _, valid_compiler in ipairs(config.valid_compilers) do
+		if compiler:match(valid_compiler:gsub("%+", "%%+")) ~= nil and compiler ~= valid_compiler then
+			return true
+		end
+	end
+
+	return false
+end
+
+--- Parses the inputed compile commands file for the drivers.
+---@param file string The file to be parsed.
+---@return table|nil The drivers to be added to clangd configuration.
+function M.drivers(file)
+	local drivers = {}
+
+	for num=0,3 do
+		drivers = {}
+
+		local pfile = io.popen("jq -r '.[].command | split(\" \") | .[" .. tostring(num) .. "]' " .. file .." | sort | uniq")
+		if pfile == nil then
+			return nil
+		end
+
+		for arg in pfile:lines() do
+			if M.is_cross_compiler(arg) then
+				table.insert(drivers, arg)
+				num = -1
+			end
+		end
+		pfile:close()
+
+		if num == -1 then
+			return drivers
+		end
+
+		num = num + 1
+	end
+
+	if #drivers == 0 then
+		return nil
+	end
+end
+
 --- Parses the inputed compile commands file for the query drivers.
 ---@param file string The file to be parsed.
 ---@return string|nil The query drivers to be added to clangd configuration.
 function M.get_query_drivers(file)
 	local prefix = "--query-driver="
-	local drivers = {}
+	local drivers = M.drivers(file)
 
-	local pfile = io.popen("jq -r '.[].command | split(\" \") | .[0]' " .. file .." | sort | uniq")
-	if pfile == nil then
-		return ""
-	end
-
-	for compiler in pfile:lines() do
-		if compiler:len() ~= 0 and not (compiler == "/usr/bin/c++" or compiler == "/usr/bin/gcc") then
-			table.insert(drivers, compiler)
-		end
-	end
-	pfile:close()
-
-	if #drivers == 0 then
+	if drivers == nil then
 		return nil
 	end
 

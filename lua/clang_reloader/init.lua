@@ -6,7 +6,7 @@ local M = {
 }
 
 -- Setup autocommands
-if conf.enable_autocommands then
+if conf.detect_on_startup then
 	require("clang_reloader.autocommands")
 end
 

@@ -10,8 +10,6 @@ M.opts = {
 
 	detect_on_startup = true,
 
-	enable_autocommands = true,
-
 	max_depth = -1,
 
 	shorten_paths = false,

@@ -53,7 +53,10 @@ local function find_build_dirs(directory)
 	return t
 end
 
+--- Finder supplied to the telescope plugin as a custom picker.
+---@return table Table of directories to be used as a prompt.
 function M.finder()
+	config = require("clang_reloader.config").opts
 	local client = vim.lsp.get_clients({name="clangd"})[1]
 	local current_src_dir = {}
 

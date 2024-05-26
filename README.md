@@ -57,7 +57,7 @@ telescope.setup{
 
 			-- These are default directories that will be displayed no matter what.
 			directories = {
-				vim.fn.getcwd(),
+				vim.fn.getcwd() .. "/.build",
 			},
 
 			-- This will trigger the reloader when you open a file and the lsp compilationDatabasePath

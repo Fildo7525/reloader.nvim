@@ -5,7 +5,7 @@ M.opts = {
 	config = require("usr.lsp.settings.clangd"),
 
 	directories = {
-		vim.fn.getcwd(),
+		vim.fn.getcwd() .. "/.build",
 	},
 
 	detect_on_startup = true,

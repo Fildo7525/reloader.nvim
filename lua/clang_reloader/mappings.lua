@@ -6,6 +6,7 @@ local action_state = require "telescope.actions.state"
 local lspconfig = require "lspconfig"
 
 local config = require("clang_reloader.config").opts
+local util = require("clang_reloader.util")
 
 local function table_size(table)
 	local size = 0
@@ -19,7 +20,7 @@ end
 
 --- Terminates all clients that have no buffers attached to it.
 function M.terminate_detached_clients()
-	local clients = vim.lsp.get_clients()
+	local clients = util.get_clients()
 
 	for _, value in ipairs(clients) do
 		if table_size(value.attached_buffers) == 0 then
@@ -135,7 +136,7 @@ function M.attach_mappings(prompt_bufnr)
 	actions.select_default:replace(function()
 		actions.close(prompt_bufnr)
 		local selection = action_state.get_selected_entry()[1]
-		local client = vim.lsp.get_clients({name = "clangd"})
+		local client = util.get_clients()
 		if #client == 0 then
 			vim.notify("The clangd server is not running.", vim.log.levels.ERROR)
 			return

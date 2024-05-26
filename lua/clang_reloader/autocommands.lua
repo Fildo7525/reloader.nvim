@@ -29,7 +29,7 @@ local id = vim.api.nvim_create_augroup("reloader.nvim", {
 if config.opts.detect_on_startup then
 	vim.api.nvim_create_autocmd({ "LspAttach" }, {
 		callback = function()
-			local clients = vim.lsp.get_clients({name= "clangd"})
+			local clients = require('clang_reloader.util').get_clients()
 			if #clients ~= 1 then
 				return;
 			end

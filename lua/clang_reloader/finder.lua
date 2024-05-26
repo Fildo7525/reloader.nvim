@@ -3,20 +3,7 @@ local M = {}
 local finders = require "telescope.finders"
 
 local config = require("clang_reloader.config").opts
-
---- Merges two tables together. Copyies from the second table are ignored.
----@param lhs table The first ttable to be merged.
----@param rhs table The second table to be merged, the copyies of the already existing values will be ignored.
----@return table Retruns a new table with the merged values.
-local function merge_tables(lhs, rhs)
-	local copy = lhs
-	for _, value in ipairs(rhs) do
-		if not vim.tbl_contains(copy, value) then
-			table.insert(copy, value)
-		end
-	end
-	return copy
-end
+local util = require("clang_reloader.util")
 
 --- Parses the inputed directory for build directories.
 ---@param directory string|nil Directory to be parsed
@@ -53,37 +40,29 @@ local function find_build_dirs(directory)
 	return t
 end
 
---- This encapsulates the current client api from nvim.
-local function get_client()
-	if vim.version().minor == 11 then
-		return vim.lsp.get_clients({name="clangd"})[1]
-	else
-		return vim.lsp.get_active_clients({name="clangd"})[1]
-	end
-end
-
 --- Finder supplied to the telescope plugin as a custom picker.
 ---@return table Table of directories to be used as a prompt.
 function M.finder()
 	config = require("clang_reloader.config").opts
-	local client = vim.lsp.get_clients({name="clangd"})[1]
+	require('clang_reloader.finder')
+	local client = util.get_client()
 	local current_src_dir = {}
 
 	if not client or not client.config or not client.config.init_options then
 		vim.api.nvim_err_writeln("No clangd client found.")
 	else
-		current_src_dir = { get_client().config.init_options.compilationDatabasePath }
+		current_src_dir = { client.config.init_options.compilationDatabasePath }
 	end
 
 	if config.shorten_paths then
 		current_src_dir[1] = current_src_dir[1]:gsub(vim.fn.getcwd(), "...")
 	end
 
-	current_src_dir = merge_tables(current_src_dir, find_build_dirs(vim.fn.getcwd()))
-	current_src_dir = merge_tables(current_src_dir, config.directories)
+	current_src_dir = util.merge_tables(current_src_dir, find_build_dirs(vim.fn.getcwd()))
+	current_src_dir = util.merge_tables(current_src_dir, config.directories)
 
 	return finders.new_table {
-		results = merge_tables(current_src_dir, {config.custom_prompt})
+		results = util.merge_tables(current_src_dir, {config.custom_prompt})
 	}
 end
 

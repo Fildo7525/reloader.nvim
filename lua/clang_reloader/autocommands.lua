@@ -30,6 +30,11 @@ if config.opts.detect_on_startup then
 	vim.api.nvim_create_autocmd({ "LspAttach" }, {
 		callback = function()
 			local clients = require('clang_reloader.util').get_clients()
+
+			if vim.tbl_contains(config.opts.forbidden_dirs, vim.fn.getcwd()) then
+				return
+			end
+
 			if #clients ~= 1 then
 				return;
 			end

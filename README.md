@@ -8,13 +8,30 @@
 - [Description](#description)
 - [Installation](#installation)
 - [Setup](#setup)
+	- [With telescope](#with-telescope)
+	- [Without telescope](#without-telescope)
+	- [Common seutp](#common-setup)
 - [Contributing](#contributing)
 
 ## Prerequisites
 
 This plugin requires the following plugins to be installed:
- - [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
  - [jq](https://stedolan.github.io/jq/)
+ - **OPTIONAL**: [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
+
+In the newest version of this plugin you can decide if you want to use telescope or not.
+If you do not want to use telescope you can use the function `:lua require('reloader').reloader()`.
+The setup is done the same way as with telescope.
+
+:warning:  You have to set the flag `use_telescope` to **false**. Otherwise the plugin will not work.
+
+```lua
+local reloader = require("clang_reloader")
+reloader.setup{
+	use_telescope = false,
+}
+```
+more in the [Without telescope](#without-telescope) section.
 
 ## Description
 
@@ -78,6 +95,8 @@ use 'Fildo7525/reloader.nvim'
 
 ### Setup
 
+#### With telescope
+
 :warning: I guess everyone has a different setup so you need to change the config to your needs. \
 The default config is as follows:
 ```lua
@@ -85,6 +104,9 @@ local telescope = require("telescope")
 telescope.setup{
 	extensions = {
 		clang_reloader = {
+			-- This is the default value. If you want to use telescope do not change this.
+			use_telescope = true,
+
 			---------------------------------------------
 			-- These you will probably need to change. --
 			---------------------------------------------
@@ -101,6 +123,9 @@ telescope.setup{
 			-------------------------------
 			-- These are not mandatory.  --
 			-------------------------------
+
+			-- Directories where the autocommand will not be executed.
+			forbidden_dirs = { },
 
 			-- These are default directories that will be displayed no matter what.
 			directories = {
@@ -134,6 +159,62 @@ telescope.load_extension('clang_reloader')
 
 ```
 
+#### Without telescope
+
+```lua
+require('clang_reloader').setup({
+	-- You have to set this to false if you do not want to use telescope.
+	use_telescope = false,
+	---------------------------------------------
+	-- These you will probably need to change. --
+	---------------------------------------------
+
+	-- Your clangd lsp config.
+	config = require("usr.lsp.settings.clangd"),
+
+	-- Your on_attach function and capabilities table.
+	options = {
+		on_attach = require("usr.lsp.handlers").on_attach,
+		capabilities = require("usr.lsp.handlers").capabilities,
+	},
+
+	-------------------------------
+	-- These are not mandatory.  --
+	-------------------------------
+
+	-- Directories where the autocommand will not be executed.
+	forbidden_dirs = { },
+
+	-- These are default directories that will be displayed no matter what.
+	directories = {
+		vim.fn.getcwd() .. "/.build",
+	},
+
+	-- This will trigger the reloader when you open a file and the lsp compilationDatabasePath
+	-- is not set or is no valid.
+	detect_on_startup = true,
+
+	-- Depth of the parsing. -1 means unbounded.
+	max_depth = -1,
+
+	-- In the picker is shown '...' instead of the current working directory.
+	-- Great if your path is so long it does not fit to the screen.
+	shorten_paths = false,
+
+	-- Compilers that are detected in the compile_commands.json file.
+	-- If you have a different compiler you can add it here.
+	valid_compilers = {
+		"clang",
+		"clang++",
+		"gcc",
+		"g++",
+		"nvcc",
+	},
+})
+```
+
+#### Common setup
+
 The on_attach function should look like this:
 ```lua
 M.on_attach = function(client, bufnr)
@@ -154,6 +235,8 @@ local cmp_nvim_lsp = require("cmp_nvim_lsp")
 
 M.capabilities = cmp_nvim_lsp.default_capabilities(capabilities)
 ```
+
+
 
 ## Contributing
 

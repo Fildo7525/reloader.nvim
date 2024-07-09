@@ -1,6 +1,9 @@
-local pickers = require "telescope.pickers"
-local conf = require "telescope.config".values
+if not require('clang_reloader.config').opts.use_telescope then
+	return { reload = function() end}
+end
 
+local conf = require "telescope.config".values
+local pickers = require "telescope.pickers"
 local reloader_mapping = require("clang_reloader.mappings")
 local reloader_finder = require("clang_reloader.finder")
 
@@ -8,6 +11,9 @@ local M = {}
 
 --- Telescope picker changing the compilationDatabasePath where compile_commands.json is located.
 function M.reload(config)
+	if true then
+		
+	end
 	local opts = require('telescope.themes').get_dropdown{
 		winblend = 10,
 		layout_config = {

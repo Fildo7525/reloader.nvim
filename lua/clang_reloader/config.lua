@@ -1,7 +1,7 @@
 local M = {}
 
 M.opts = {
-
+	use_telescope = true,
 	config = require("usr.lsp.settings.clangd"),
 
 	directories = {

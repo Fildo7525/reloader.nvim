@@ -102,34 +102,34 @@ function M.get_query_drivers(file)
 	return prefix .. table.concat(drivers, ",")
 end
 
-local function handle_direct_choise(selection)
-		local clangConfig = config.config;
+function M.handle_direct_choise(selection)
+	local clangConfig = config.config;
 
-		-- Setup the compilation database path
-		selection = selection:gsub("%.%.%.", vim.fn.getcwd())
-		clangConfig.init_options = {compilationDatabasePath = selection}
+	-- Setup the compilation database path
+	selection = selection:gsub("%.%.%.", vim.fn.getcwd())
+	clangConfig.init_options = {compilationDatabasePath = selection}
 
-		if string.match(clangConfig.cmd[#clangConfig.cmd], "--query[-]driver%S+") ~= nil then
-			table.remove(clangConfig.cmd, #clangConfig.cmd)
-		end
+	if string.match(clangConfig.cmd[#clangConfig.cmd], "--query[-]driver%S+") ~= nil then
+		table.remove(clangConfig.cmd, #clangConfig.cmd)
+	end
 
-		-- Setup the query drivers
-		if selection:sub(#selection) == "/" then
-			selection = selection:sub(1, #selection - 1)
-		end
-		local drivers = M.get_query_drivers(selection.."/compile_commands.json")
-		if drivers then
-			table.insert(clangConfig.cmd, drivers)
-		end
+	-- Setup the query drivers
+	if selection:sub(#selection) == "/" then
+		selection = selection:sub(1, #selection - 1)
+	end
+	local drivers = M.get_query_drivers(selection.."/compile_commands.json")
+	if drivers then
+		table.insert(clangConfig.cmd, drivers)
+	end
 
-		-- Update the configuration with the user configuration
-		clangConfig = vim.tbl_deep_extend("force", clangConfig, config.options)
-		lspconfig['clangd'].setup(clangConfig)
+	-- Update the configuration with the user configuration
+	clangConfig = vim.tbl_deep_extend("force", clangConfig, config.options)
+	lspconfig['clangd'].setup(clangConfig)
 
-		vim.lsp.start_client(lspconfig['clangd'])
+	vim.lsp.start_client(lspconfig['clangd'])
 
-		-- Terminate all clients that have no buffers attached to it.
-		M.timer = vim.fn.timer_start(500, M.terminate_detached_clients, {repeats = 1})
+	-- Terminate all clients that have no buffers attached to it.
+	M.timer = vim.fn.timer_start(500, M.terminate_detached_clients, {repeats = 1})
 end
 
 function M.attach_mappings(prompt_bufnr)
@@ -143,10 +143,10 @@ function M.attach_mappings(prompt_bufnr)
 		end
 
 		if selection:match(config.custom_prompt) == nil then
-			handle_direct_choise(selection)
+			M.handle_direct_choise(selection)
 		else
 			local ret = vim.fn.input("Enter the path to the compilation database: ", vim.fn.getcwd(), "file")
-			handle_direct_choise(ret)
+			M.handle_direct_choise(ret)
 		end
 
 	end)

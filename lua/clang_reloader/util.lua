@@ -76,7 +76,7 @@ end
 --- This encapsulates the current client api from nvim.
 --- @return table The current client.
 function M.get_clients()
-	if vim.version().minor == 11 then
+	if vim.version().minor >= 11 then
 		return vim.lsp.get_clients({name="clangd"})
 	else
 		return vim.lsp.get_active_clients({name="clangd"})

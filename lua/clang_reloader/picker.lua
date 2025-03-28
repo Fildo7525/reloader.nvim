@@ -11,9 +11,6 @@ local M = {}
 
 --- Telescope picker changing the compilationDatabasePath where compile_commands.json is located.
 function M.reload(config)
-	if true then
-		
-	end
 	local opts = require('telescope.themes').get_dropdown{
 		winblend = 10,
 		layout_config = {

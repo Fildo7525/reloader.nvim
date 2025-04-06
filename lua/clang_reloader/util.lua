@@ -63,10 +63,10 @@ function M.handle_direct_choise(selection, config)
 	end
 
 	-- Update the configuration with the user configuration
-	clangConfig = vim.tbl_deep_extend("force", clangConfig, config.options)
+	clangConfig = vim.tbl_deep_extend("force", config.options, clangConfig)
 	lspconfig['clangd'].setup(clangConfig)
 
-	vim.lsp.start_client(lspconfig['clangd'])
+	vim.lsp.start(lspconfig['clangd'])
 
 	-- Terminate all clients that have no buffers attached to it.
 	M.timer = vim.fn.timer_start(500, M.terminate_detached_clients, {repeats = 1})

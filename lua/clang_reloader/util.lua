@@ -52,12 +52,13 @@ function M.handle_direct_choise(selection, config)
 		selection = selection:sub(1, #selection - 1)
 	end
 
-	if vim.fn.filereadable(selection .. "/compile_commands.json") then
+	if not vim.fn.filereadable(selection .. "/compile_commands.json") then
 		vim.notify("The compile_commands.json file was found.", vim.log.levels.INFO)
 		return
 	end
 
-	local drivers = M.get_query_drivers(selection.."/compile_commands.json")
+	local mappings = require("clang_reloader.mappings")
+	local drivers = mappings.get_query_drivers(selection.."/compile_commands.json")
 	if drivers then
 		table.insert(clangConfig.cmd, drivers)
 	end

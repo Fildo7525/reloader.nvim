@@ -17,6 +17,7 @@
 
 This plugin requires the following plugins to be installed:
  - [jq](https://stedolan.github.io/jq/)
+ - [fd](https://github.com/sharkdp/fd) - one some systems it is called `fd-find`, we asseme name `fd`
  - **OPTIONAL**: [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
 
 In the newest version of this plugin you can decide if you want to use telescope or not.

@@ -8,10 +8,10 @@ function M.find_build_dirs(directory, config)
 
 	local max_depth = ""
 	if config.max_depth >= 0 then
-		max_depth = "-maxdepth " .. tostring(config.max_depth)
+		max_depth = "--max-depth " .. tostring(config.max_depth)
 	end
 
-	local pfile = popen("find " .. directory .. " " .. max_depth .. "  -name 'compile_commands.json' -type f")
+	local pfile = popen("fd -I -t=f " .. max_depth .. "  'compile_commands.json' " .. directory)
 	if pfile == nil then
 		return t
 	end

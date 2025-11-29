@@ -35,16 +35,43 @@ function M.find_build_dirs(directory, config)
 	return t
 end
 
-function M.handle_direct_choise(selection, config)
-	local clangConfig = config.config;
-	local lspconfig = require "lspconfig"
+local function find_query_driver_arg(cmd)
+	for idx, arg in ipairs(cmd) do
+		local match = string.match(arg, "--query[-]driver%S+")
+		if match ~= nil then
+			return idx
+		end
+	end
+	return nil
+end
+
+function M.terminate_detached_clients()
+	local clients = M.get_clients()
+	for _, client in ipairs(clients) do
+		if #client.attached_buffers == 0 then
+			client:stop()
+		end
+	end
+end
+
+
+function M.handle_direct_choise(selection)
+	local lspconfig = vim.lsp.config
+	local clangConfig = lspconfig['clangd'] and vim.deepcopy(lspconfig['clangd']) or {}
+
+	if vim.tbl_isempty(clangConfig) then
+		vim.notify("Clangd LSP configuration not found in vim.lsp.config", vim.log.levels.ERROR)
+		return
+	end
 
 	-- Setup the compilation database path
 	selection = selection:gsub("%.%.%.", vim.fn.getcwd())
 	clangConfig.init_options = {compilationDatabasePath = selection}
 
-	if string.match(clangConfig.cmd[#clangConfig.cmd], "--query[-]driver%S+") ~= nil then
-		table.remove(clangConfig.cmd, #clangConfig.cmd)
+	-- Remove any existing query driver argument
+	local idx = find_query_driver_arg(clangConfig.cmd)
+	if idx ~= nil then
+		table.remove(clangConfig.cmd, idx)
 	end
 
 	-- Setup the query drivers
@@ -57,31 +84,34 @@ function M.handle_direct_choise(selection, config)
 		return
 	end
 
+	local file = selection .. "/compile_commands.json"
+
+	if vim.fn.filereadable(file) == 0 then
+		vim.notify("The compilation database file does not exist: " .. file, vim.log.levels.ERROR)
+		return nil
+	end
+
 	local mappings = require("clang_reloader.mappings")
-	local drivers = mappings.get_query_drivers(selection.."/compile_commands.json")
+	local drivers = mappings.get_query_drivers(file)
 	if drivers then
 		table.insert(clangConfig.cmd, drivers)
 	end
 
 	-- Update the configuration with the user configuration
-	clangConfig = vim.tbl_deep_extend("force", config.options, clangConfig)
-	lspconfig['clangd'].setup(clangConfig)
+	vim.lsp.config("clangd", clangConfig)
 
-	vim.lsp.start(lspconfig['clangd'])
+	for _, client in ipairs(M.get_clients()) do
+		client:stop()
+	end
 
-	-- Terminate all clients that have no buffers attached to it.
-	M.timer = vim.fn.timer_start(500, M.terminate_detached_clients, {repeats = 1})
+	vim.lsp.start(vim.lsp.config["clangd"])
 end
 
 
 --- This encapsulates the current client api from nvim.
 --- @return table The current client.
 function M.get_clients()
-	if vim.version().minor >= 11 then
-		return vim.lsp.get_clients({name="clangd"})
-	else
-		return vim.lsp.get_active_clients({name="clangd"})
-	end
+	return vim.lsp.get_clients({name="clangd"})
 end
 
 --- This encapsulates the current client api from nvim.

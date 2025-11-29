@@ -4,7 +4,7 @@ M.timer = nil
 local actions = require "telescope.actions"
 local action_state = require "telescope.actions.state"
 
-local config = require("clang_reloader.config").opts
+local config = require("clang_reloader.config")
 local util = require("clang_reloader.util")
 
 local function table_size(table)
@@ -35,6 +35,7 @@ end
 ---@param arg string The argument to be checked.
 ---@return boolean True if the argument is a cross compiler, false otherwise.
 function M.is_cross_compiler(arg)
+	local conf = config:instance()
 	if arg:len() == 0 then
 		return false
 	end
@@ -44,7 +45,7 @@ function M.is_cross_compiler(arg)
 		return false
 	end
 
-	for _, valid_compiler in ipairs(config.valid_compilers) do
+	for _, valid_compiler in ipairs(conf.valid_compilers) do
 		if compiler:match(valid_compiler:gsub("%+", "%%+")) ~= nil and compiler ~= valid_compiler then
 			return true
 		end
@@ -91,10 +92,12 @@ end
 ---@param file string The file to be parsed.
 ---@return string|nil The query drivers to be added to clangd configuration.
 function M.get_query_drivers(file)
+
 	local prefix = "--query-driver="
 	local drivers = M.drivers(file)
 
 	if drivers == nil then
+		-- vim.notify("No cross compilers found in the compilation database.", vim.log.levels.WARN)
 		return nil
 	end
 
@@ -103,6 +106,7 @@ end
 
 function M.attach_mappings(prompt_bufnr)
 	actions.select_default:replace(function()
+		local conf = config:instance()
 		actions.close(prompt_bufnr)
 		local selection = action_state.get_selected_entry()[1]
 		local client = util.get_clients()
@@ -111,11 +115,11 @@ function M.attach_mappings(prompt_bufnr)
 			return
 		end
 
-		if selection:match(config.custom_prompt) == nil then
-			util.handle_direct_choise(selection, config)
+		if selection:match(conf.custom_prompt) == nil then
+			util.handle_direct_choise(selection, conf)
 		else
 			local ret = vim.fn.input("Enter the path to the compilation database: ", vim.fn.getcwd(), "file")
-			util.handle_direct_choise(ret, config)
+			util.handle_direct_choise(ret, conf)
 		end
 
 	end)

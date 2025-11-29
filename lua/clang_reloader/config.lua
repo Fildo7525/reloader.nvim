@@ -1,11 +1,9 @@
-local M = {}
+local M = {
+	_config = {},
 
-M.opts = {
-	use_telescope = true,
 	forbidden_dirs = {
 
 	},
-	config = require("usr.lsp.settings.clangd"),
 
 	directories = {
 		vim.fn.getcwd() .. "/.build",
@@ -16,11 +14,6 @@ M.opts = {
 	max_depth = -1,
 
 	shorten_paths = false,
-
-	options = {
-		on_attach = require("usr.lsp.handlers").on_attach,
-		capabilities = require("usr.lsp.handlers").capabilities,
-	},
 
 	custom_prompt = "+ Supply custom path",
 
@@ -33,10 +26,15 @@ M.opts = {
 	},
 }
 
-function M.setup(options)
-	options = options or {}
+function M:instance(config)
+	config = config or {}
 
-	M.opts = vim.tbl_deep_extend("force", M.opts, options)
+	if vim.tbl_isempty(config) and not vim.tbl_isempty(self._config) then
+		return self._config
+	end
+
+	self._config = vim.tbl_deep_extend('force', {}, self, config)
+	return self._config
 end
 
 return M

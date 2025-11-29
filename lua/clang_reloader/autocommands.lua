@@ -14,24 +14,16 @@ local function exists(file)
 	return ok
 end
 
---- Check if a directory exists in this path
----@param path string The path to check.
----@return boolean Returns true if the directory exists, false otherwise.
-local function isdir(path)
-	-- "/" works on both Unix and Windows
-	return exists(path.."/")
-end
-
 local id = vim.api.nvim_create_augroup("reloader.nvim", {
 	clear = true,
 })
 
-if config.opts.detect_on_startup then
+if config.detect_on_startup then
 	vim.api.nvim_create_autocmd({ "LspAttach" }, {
 		callback = function()
 			local clients = require('clang_reloader.util').get_clients()
 
-			if vim.tbl_contains(config.opts.forbidden_dirs, vim.fn.getcwd()) then
+			if vim.tbl_contains(config.forbidden_dirs, vim.fn.getcwd()) then
 				return
 			end
 
@@ -41,8 +33,8 @@ if config.opts.detect_on_startup then
 
 			local path = clients[1].config.init_options.compilationDatabasePath
 
-			if not isdir(path) then
-				require('clang_reloader.picker').reload()
+			if not exists(path .. "/") then
+				require('clang_reloader').reload()
 			end
 		end,
 		group = id,

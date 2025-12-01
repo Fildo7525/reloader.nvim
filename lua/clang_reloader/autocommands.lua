@@ -18,12 +18,12 @@ local id = vim.api.nvim_create_augroup("reloader.nvim", {
 	clear = true,
 })
 
-if config.detect_on_startup then
+if config.autocommand.enable then
 	vim.api.nvim_create_autocmd({ "LspAttach" }, {
 		callback = function()
 			local clients = require('clang_reloader.util').get_clients()
 
-			if vim.tbl_contains(config.forbidden_dirs, vim.fn.getcwd()) then
+			if vim.tbl_contains(config.autocommand.forbidden_dirs, vim.fn.getcwd()) then
 				return
 			end
 

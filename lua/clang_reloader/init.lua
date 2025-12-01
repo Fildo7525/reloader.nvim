@@ -6,7 +6,7 @@ local M = {}
 function M.setup(user_config)
 	user_config = conf:instance(user_config)
 
-	if user_config.detect_on_startup then
+	if user_config.autocommand.enable then
 		require('clang_reloader.autocommands')
 	end
 end

@@ -1,13 +1,12 @@
 local M = {
 	_config = {},
 
-
 	directories = {
 		vim.fn.getcwd() .. "/.build",
 	},
 
 	autocommand = {
-		enable = true,
+		enable = false,
 		forbidden_dirs = { },
 	},
 

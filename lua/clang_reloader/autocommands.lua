@@ -20,6 +20,7 @@ local id = vim.api.nvim_create_augroup("reloader.nvim", {
 
 if config.autocommand.enable then
 	vim.api.nvim_create_autocmd({ "LspAttach" }, {
+		pattern = { "*.c", "*.cpp", "*.h", "*.hh", "*.hpp", "*.cc", "*.cxx" },
 		callback = function()
 			local clients = require('clang_reloader.util').get_clients()
 

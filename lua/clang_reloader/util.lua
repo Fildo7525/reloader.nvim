@@ -97,6 +97,8 @@ function M.handle_direct_choise(selection)
 		table.insert(clangConfig.cmd, drivers)
 	end
 
+	local attached_buffers = vim.lsp.get_clients({name="clangd"})[1].attached_buffers
+
 	-- Update the configuration with the user configuration
 	vim.lsp.config("clangd", clangConfig)
 
@@ -104,7 +106,15 @@ function M.handle_direct_choise(selection)
 		client:stop()
 	end
 
-	vim.lsp.start(vim.lsp.config["clangd"])
+	local client_id = vim.lsp.start(vim.lsp.config["clangd"])
+	if client_id == nil then
+		vim.notify("Failed to start clangd client", vim.log.levels.ERROR)
+		return
+	end
+
+	for bufnr, _ in pairs(attached_buffers) do
+		vim.lsp.buf_attach_client(bufnr, client_id)
+	end
 end
 
 

@@ -1,9 +1,6 @@
 local M = {}
 M.timer = nil
 
-local actions = require "telescope.actions"
-local action_state = require "telescope.actions.state"
-
 local config = require("clang_reloader.config")
 local util = require("clang_reloader.util")
 
@@ -105,6 +102,10 @@ function M.get_query_drivers(file)
 end
 
 function M.attach_mappings(prompt_bufnr)
+	-- telescope is optional, only load it when this picker integration is used
+	local actions = require "telescope.actions"
+	local action_state = require "telescope.actions.state"
+
 	actions.select_default:replace(function()
 		local conf = config:instance()
 		actions.close(prompt_bufnr)

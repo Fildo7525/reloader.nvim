@@ -21,8 +21,8 @@ local id = vim.api.nvim_create_augroup("reloader.nvim", {
 if config.autocommand.enable then
 	vim.api.nvim_create_autocmd({ "LspAttach" }, {
 		pattern = { "*.c", "*.cpp", "*.h", "*.hh", "*.hpp", "*.cc", "*.cxx" },
-		callback = function()
-			local clients = require('clang_reloader.util').get_clients()
+		callback = function(args)
+			local clients = require('clang_reloader.util').get_clients(args.buf)
 
 			if vim.tbl_contains(config.autocommand.forbidden_dirs, vim.fn.getcwd()) then
 				return
@@ -32,9 +32,9 @@ if config.autocommand.enable then
 				return;
 			end
 
-			local path = clients[1].config.init_options.compilationDatabasePath
+			local path = (clients[1].config.init_options or {}).compilationDatabasePath
 
-			if not exists(path .. "/") then
+			if not path or not exists(path .. "/") then
 				require('clang_reloader').reload()
 			end
 		end,

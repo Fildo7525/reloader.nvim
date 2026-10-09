@@ -63,6 +63,20 @@ drivers for you.
  > If you know how to do this on other versions please let me know or make a PR.
 > But the compilationDatabasePath changing works on all versions.
 
+### One clangd client per working directory
+
+The reload applies to the working directory of the current buffer (`:cd`, `:lcd`, `:tcd`, or
+the buffer-local `:bcd` of Neovim nightly). The chosen database is used by a dedicated client
+named `clangd_<working directory>`:
+
+ - all buffers with the same working directory are moved from the other clangd clients to it,
+ - clangd clients left without buffers are stopped,
+ - buffers with another working directory keep their clients.
+
+So two files with different working directories can run two clangd instances with their own
+compilation databases. Reloading again in the same working directory replaces that client.
+The `root_dir` of the client is found with `root_markers` and falls back to the working directory.
+
 ## Installation
 
 You can install this plugin with your favourite plugin manager. For example with
@@ -97,6 +111,10 @@ require('clang_reloader').setup({
 
 	-- Depth of the parsing. -1 means unbounded.
 	max_depth = -1,
+
+	-- Used to find the root_dir of the per-working-directory clangd client.
+	-- Searched upwards from the file, a nested table means equal priority.
+	root_markers = { { "build" }, ".git" },
 
 	-- In the picker is shown '...' instead of the current working directory.
 	-- Great if your path is so long it does not fit to the screen.

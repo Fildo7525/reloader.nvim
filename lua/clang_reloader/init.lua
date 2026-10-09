@@ -11,25 +11,24 @@ function M.setup(user_config)
 	end
 end
 
-local function handle_selection(selected)
+local function handle_selection(selected, bufnr, cwd)
 	local config = conf:instance()
 	if not selected then
 		return
 	end
 
 	if selected == config.custom_prompt then
-		selected = vim.fn.input("Enter the path to the compilation database directory: ", vim.fn.getcwd(), "file")
-		vim.notify(selected, vim.log.levels.INFO)
-		if selected == "" or vim.fn.filereadable(selected .. "compile_commands.json") then
+		selected = vim.fn.input("Enter the path to the compilation database directory: ", cwd, "file")
+		if selected == "" then
 			return
 		end
 	end
 
-	util.handle_direct_choise(selected)
+	util.handle_direct_choise(selected, bufnr, cwd)
 end
 
-local function simple_finder()
-	local client = util.get_client()
+local function simple_finder(bufnr)
+	local client = util.get_client(bufnr)
 	local current_src_dir = {}
 	local config = conf:instance()
 
@@ -50,13 +49,20 @@ local function simple_finder()
 end
 
 function M.reload()
+	-- The buffer and its working directory are captured now: the picker is asynchronous
+	-- and the selection must be applied to the buffer it was opened from.
+	local bufnr = vim.api.nvim_get_current_buf()
+	local cwd = vim.fn.getcwd()
+
 	local prompt = "compilationDatabasePath"
-	local paths = unpack(simple_finder());
+	local paths = unpack(simple_finder(bufnr));
 
 	vim.ui.select(
 		paths,
 		{ prompt = prompt },
-		handle_selection
+		function(selected)
+			handle_selection(selected, bufnr, cwd)
+		end
 	)
 end
 

@@ -12,6 +12,11 @@ local M = {
 
 	max_depth = -1,
 
+	-- Used to find the root_dir of the per-working-directory clangd client.
+	-- Searched upwards from the file, a nested table means equal priority.
+	-- Falls back to the working directory of the buffer.
+	root_markers = { { "build" }, ".git" },
+
 	shorten_paths = false,
 
 	custom_prompt = "+ Supply custom path",

@@ -54,7 +54,7 @@ function M.reload()
 	local bufnr = vim.api.nvim_get_current_buf()
 	local cwd = vim.fn.getcwd()
 
-	local prompt = "compilationDatabasePath"
+	local prompt = "compilationDatabasePath [ " .. cwd .. " ]"
 	local paths = unpack(simple_finder(bufnr));
 
 	vim.ui.select(

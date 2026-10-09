@@ -75,6 +75,79 @@ local function buf_wd(buf, bufnr, cwd)
 	return normalize(vim.fn.getcwd(-1, -1))
 end
 
+--- Name of the clangd client that belongs to a working directory.
+local function client_name(wd)
+	return BASE_NAME .. "_" .. (wd:gsub("[^%w]", "_"))
+end
+
+--- Working directory of a buffer that is not being reloaded.
+local function buffer_wd(buf)
+	if vim.fn.haslocaldir(-1, -1, buf) ~= 0 then
+		return normalize(vim.fn.getcwd(-1, -1, buf))
+	end
+	if buf == vim.api.nvim_get_current_buf() then
+		return normalize(vim.fn.getcwd())
+	end
+	return normalize(vim.fn.getcwd(-1, -1))
+end
+
+local guard_installed = false
+
+--- vim.lsp.enable() attaches the shared "clangd" client to every C/C++ buffer on FileType,
+--- also to buffers that are already served by a "clangd_<wd>" client (:edit, a file that is
+--- opened later in the same directory). Such a buffer would have two clangd clients, so the
+--- shared one is swapped for the per-directory client as soon as it attaches.
+--- Installed on the first reload, per-directory clients do not exist before.
+local function ensure_guard()
+	if guard_installed then
+		return
+	end
+	guard_installed = true
+
+	vim.api.nvim_create_autocmd("LspAttach", {
+		group = vim.api.nvim_create_augroup("reloader.nvim.per_wd", { clear = true }),
+		callback = function(args)
+			local client = vim.lsp.get_client_by_id(args.data.client_id)
+			if not client or client.name ~= BASE_NAME then
+				return
+			end
+
+			local buf = args.buf
+
+			-- A replaced client may still be shutting down, only a running one can take over
+			local target
+			for _, candidate in ipairs(vim.lsp.get_clients({ name = client_name(buffer_wd(buf)) })) do
+				if not candidate:is_stopped() then
+					target = candidate
+					break
+				end
+			end
+			if not target then
+				return
+			end
+
+			vim.schedule(function()
+				if not vim.api.nvim_buf_is_valid(buf) then
+					return
+				end
+
+				vim.lsp.buf_detach_client(buf, client.id)
+				vim.lsp.buf_attach_client(buf, target.id)
+
+				local remaining = 0
+				for b in pairs(client.attached_buffers) do
+					if b ~= buf and vim.api.nvim_buf_is_valid(b) then
+						remaining = remaining + 1
+					end
+				end
+				if remaining == 0 and not client:is_stopped() then
+					client:stop()
+				end
+			end)
+		end,
+	})
+end
+
 --- Gives the working directory of a buffer its own clangd client "clangd_<wd>" that uses
 --- the selected compilation database:
 ---  1. every buffer with the same working directory is detached from the other clangd
@@ -109,7 +182,7 @@ function M.handle_direct_choise(selection, bufnr, cwd)
 	end
 	local cfg = vim.deepcopy(base)
 
-	local new_lsp_name = BASE_NAME .. "_" .. (cwd:gsub("[^%w]", "_"))
+	local new_lsp_name = client_name(cwd)
 	cfg.name = new_lsp_name
 	cfg.root_markers = nil
 	cfg.root_dir = vim.fs.root(bufnr, require("clang_reloader.config"):instance().root_markers) or cwd
@@ -167,6 +240,8 @@ function M.handle_direct_choise(selection, bufnr, cwd)
 		vim.notify("Failed to start clangd client " .. new_lsp_name, vim.log.levels.ERROR)
 		return
 	end
+
+	ensure_guard()
 
 	for _, m in ipairs(moves) do
 		for _, buf in ipairs(m.move) do

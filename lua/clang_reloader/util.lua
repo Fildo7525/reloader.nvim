@@ -104,13 +104,13 @@ function M.handle_direct_choise(selection, bufnr, cwd)
 	-- Private copy of the base configuration, the registered one is never modified
 	local base = vim.lsp.config[BASE_NAME]
 	if not base or not base.cmd then
-		vim.notify("Clangd LSP configuration not found in vim.lsp.config", vim.log.levels.ERROR)
+		vim.notify("'" .. BASE_NAME .. "' LSP configuration not found in vim.lsp.config", vim.log.levels.ERROR)
 		return
 	end
 	local cfg = vim.deepcopy(base)
 
-	local name = BASE_NAME .. "_" .. (cwd:gsub("[^%w]", "_"))
-	cfg.name = name
+	local new_lsp_name = BASE_NAME .. "_" .. (cwd:gsub("[^%w]", "_"))
+	cfg.name = new_lsp_name
 	cfg.root_markers = nil
 	cfg.root_dir = vim.fs.root(bufnr, require("clang_reloader.config"):instance().root_markers) or cwd
 	cfg.cmd_cwd = cwd
@@ -139,14 +139,18 @@ function M.handle_direct_choise(selection, bufnr, cwd)
 	for _, client in ipairs(M.get_clients()) do
 		local move, remaining = {}, 0
 		for buf in pairs(client.attached_buffers) do
-			if vim.api.nvim_buf_is_valid(buf) then
-				if client.name == name or buf == bufnr or buf_wd(buf, bufnr, cwd) == cwd then
-					table.insert(move, buf)
-					to_attach[buf] = true
-				else
-					remaining = remaining + 1
-				end
+			if not vim.api.nvim_buf_is_valid(buf) then
+				goto continue
 			end
+
+			if client.name == new_lsp_name or buf == bufnr or buf_wd(buf, bufnr, cwd) == cwd then
+				table.insert(move, buf)
+				to_attach[buf] = true
+			else
+				remaining = remaining + 1
+			end
+
+			::continue::
 		end
 		table.insert(moves, { client = client, move = move, remaining = remaining })
 	end
@@ -160,7 +164,7 @@ function M.handle_direct_choise(selection, bufnr, cwd)
 		end,
 	})
 	if client_id == nil then
-		vim.notify("Failed to start clangd client " .. name, vim.log.levels.ERROR)
+		vim.notify("Failed to start clangd client " .. new_lsp_name, vim.log.levels.ERROR)
 		return
 	end
 
@@ -185,7 +189,7 @@ function M.handle_direct_choise(selection, bufnr, cwd)
 		end
 	end
 
-	vim.notify(("%s (root: %s): %d buffer%s attached"):format(name, cfg.root_dir, count, count == 1 and "" or "s"))
+	vim.notify(("%s (root: %s): %d buffer%s attached"):format(new_lsp_name, cfg.root_dir, count, count == 1 and "" or "s"))
 end
 
 

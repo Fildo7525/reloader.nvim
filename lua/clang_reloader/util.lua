@@ -62,9 +62,6 @@ local function normalize(path)
 	return p == "" and "/" or p
 end
 
---- Working directory of a buffer.
---- The reloaded buffer uses the supplied cwd (it is the current one when the picker was
---- opened). Other buffers use their :bcd directory, falling back to the global directory.
 local function buf_wd(buf, bufnr, cwd)
 	if buf == bufnr then
 		return cwd
@@ -91,6 +88,54 @@ local function buffer_wd(buf)
 	return normalize(vim.fn.getcwd(-1, -1))
 end
 
+--- True when path is dir or lies below it.
+local function is_path_subdir_of(path, dir)
+	return path == dir or vim.startswith(path, dir == "/" and "/" or dir .. "/")
+end
+
+local function buf_get_name_normalized(buf)
+	local name = vim.api.nvim_buf_get_name(buf)
+	return name ~= "" and normalize(name) or nil
+end
+
+--- Find an already running lsp for the working directory.
+local function find_target_lsp(buf)
+	local attach_by_path = require("clang_reloader.config"):instance().attach_by_path
+	local by_wd = client_name(buffer_wd(buf))
+	local path = buf_get_name_normalized(buf)
+
+	local best, best_len
+	for _, client in ipairs(M.get_clients()) do
+		if client.name ~= BASE_NAME and not client:is_stopped() then
+			if client.name == by_wd then
+				return client
+			end
+
+			local dir = client.config and client.config.cmd_cwd
+			if attach_by_path and path and dir and is_path_subdir_of(path, dir) and (not best_len or #dir > best_len) then
+				best, best_len = client, #dir
+			end
+		end
+	end
+	return best
+end
+
+--- True when a buffer belongs to dir because its file lies below it, unless a client with a
+--- deeper working directory (a more specific per-directory client) already serves it.
+local function belongs_by_path(buf, client, dir)
+	if not require("clang_reloader.config"):instance().attach_by_path then
+		return false
+	end
+
+	local path = buf_get_name_normalized(buf)
+	if not path or not is_path_subdir_of(path, dir) then
+		return false
+	end
+
+	local owner = client.config and client.config.cmd_cwd
+	return not (client.name ~= BASE_NAME and owner and #owner > #dir and is_path_subdir_of(path, owner))
+end
+
 local guard_installed = false
 
 --- vim.lsp.enable() attaches the shared "clangd" client to every C/C++ buffer on FileType,
@@ -113,16 +158,8 @@ local function ensure_guard()
 			end
 
 			local buf = args.buf
-
-			-- A replaced client may still be shutting down, only a running one can take over
-			local target
-			for _, candidate in ipairs(vim.lsp.get_clients({ name = client_name(buffer_wd(buf)) })) do
-				if not candidate:is_stopped() then
-					target = candidate
-					break
-				end
-			end
-			if not target then
+			local target_lsp = find_target_lsp(buf)
+			if not target_lsp then
 				return
 			end
 
@@ -132,7 +169,7 @@ local function ensure_guard()
 				end
 
 				vim.lsp.buf_detach_client(buf, client.id)
-				vim.lsp.buf_attach_client(buf, target.id)
+				vim.lsp.buf_attach_client(buf, target_lsp.id)
 
 				local remaining = 0
 				for b in pairs(client.attached_buffers) do
@@ -216,7 +253,11 @@ function M.handle_direct_choise(selection, bufnr, cwd)
 				goto continue
 			end
 
-			if client.name == new_lsp_name or buf == bufnr or buf_wd(buf, bufnr, cwd) == cwd then
+			if client.name == new_lsp_name
+				or buf == bufnr
+				or buf_wd(buf, bufnr, cwd) == cwd
+				or belongs_by_path(buf, client, cwd)
+			then
 				table.insert(move, buf)
 				to_attach[buf] = true
 			else

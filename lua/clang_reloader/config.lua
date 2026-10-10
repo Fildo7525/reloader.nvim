@@ -17,6 +17,12 @@ local M = {
 	-- Falls back to the working directory of the buffer.
 	root_markers = { { "build" }, ".git" },
 
+	-- Buffers do not inherit the buffer-local directory (:bcd), so a new file in the
+	-- directory of a per-directory client would stay on the shared "clangd" client.
+	-- When true, a file below the working directory of a "clangd_<wd>" client is given to
+	-- that client (the deepest one wins), also when the reload is done.
+	attach_by_path = true,
+
 	shorten_paths = false,
 
 	custom_prompt = "+ Supply custom path",

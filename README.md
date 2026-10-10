@@ -77,6 +77,12 @@ So two files with different working directories can run two clangd instances wit
 compilation databases. Reloading again in the same working directory replaces that client.
 The `root_dir` of the client is found with `root_markers` and falls back to the working directory.
 
+Files opened later are given to the matching client as well: when the shared `clangd` client
+attaches to a buffer, it is swapped for the `clangd_<wd>` client of the buffer's working
+directory. Because a buffer does not inherit the `:bcd` of another buffer, a file is also
+matched by its path: a file below the working directory of a client belongs to it (the deepest
+working directory wins). Disable this with `attach_by_path = false`.
+
 ## Installation
 
 You can install this plugin with your favourite plugin manager. For example with
@@ -115,6 +121,9 @@ require('clang_reloader').setup({
 	-- Used to find the root_dir of the per-working-directory clangd client.
 	-- Searched upwards from the file, a nested table means equal priority.
 	root_markers = { { "build" }, ".git" },
+
+	-- Give files below the directory of a clangd_<wd> client to that client.
+	attach_by_path = true,
 
 	-- In the picker is shown '...' instead of the current working directory.
 	-- Great if your path is so long it does not fit to the screen.

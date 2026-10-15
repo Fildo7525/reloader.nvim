@@ -1,5 +1,7 @@
 local M = {}
 
+local BASE_NAME = "clangd"
+
 --- Parses the inputed directory for build directories.
 ---@param directory string|nil Directory to be parsed
 ---@return table Table of directories located in the directory
@@ -55,79 +57,273 @@ function M.terminate_detached_clients()
 end
 
 
-function M.handle_direct_choise(selection)
-	local lspconfig = vim.lsp.config
-	local clangConfig = lspconfig['clangd'] and vim.deepcopy(lspconfig['clangd']) or {}
+local function normalize(path)
+	local p = vim.fs.normalize(path):gsub("/+$", "")
+	return p == "" and "/" or p
+end
 
-	if vim.tbl_isempty(clangConfig) then
-		vim.notify("Clangd LSP configuration not found in vim.lsp.config", vim.log.levels.ERROR)
+local function buf_wd(buf, bufnr, cwd)
+	if buf == bufnr then
+		return cwd
+	end
+	if vim.fn.haslocaldir(-1, -1, buf) ~= 0 then
+		return normalize(vim.fn.getcwd(-1, -1, buf))
+	end
+	return normalize(vim.fn.getcwd(-1, -1))
+end
+
+--- Name of the clangd client that belongs to a working directory.
+local function client_name(wd)
+	return BASE_NAME .. "_" .. (wd:gsub("[^%w]", "_"))
+end
+
+--- Working directory of a buffer that is not being reloaded.
+local function buffer_wd(buf)
+	if vim.fn.haslocaldir(-1, -1, buf) ~= 0 then
+		return normalize(vim.fn.getcwd(-1, -1, buf))
+	end
+	if buf == vim.api.nvim_get_current_buf() then
+		return normalize(vim.fn.getcwd())
+	end
+	return normalize(vim.fn.getcwd(-1, -1))
+end
+
+--- True when path is dir or lies below it.
+local function is_path_subdir_of(path, dir)
+	return path == dir or vim.startswith(path, dir == "/" and "/" or dir .. "/")
+end
+
+local function buf_get_name_normalized(buf)
+	local name = vim.api.nvim_buf_get_name(buf)
+	return name ~= "" and normalize(name) or nil
+end
+
+--- Find an already running lsp for the working directory.
+local function find_target_lsp(buf)
+	local attach_by_path = require("clang_reloader.config"):instance().attach_by_path
+	local by_wd = client_name(buffer_wd(buf))
+	local path = buf_get_name_normalized(buf)
+
+	local best, best_len
+	for _, client in ipairs(M.get_clients()) do
+		if client.name ~= BASE_NAME and not client:is_stopped() then
+			if client.name == by_wd then
+				return client
+			end
+
+			local dir = client.config and client.config.cmd_cwd
+			if attach_by_path and path and dir and is_path_subdir_of(path, dir) and (not best_len or #dir > best_len) then
+				best, best_len = client, #dir
+			end
+		end
+	end
+	return best
+end
+
+--- True when a buffer belongs to dir because its file lies below it, unless a client with a
+--- deeper working directory (a more specific per-directory client) already serves it.
+local function belongs_by_path(buf, client, dir)
+	if not require("clang_reloader.config"):instance().attach_by_path then
+		return false
+	end
+
+	local path = buf_get_name_normalized(buf)
+	if not path or not is_path_subdir_of(path, dir) then
+		return false
+	end
+
+	local owner = client.config and client.config.cmd_cwd
+	return not (client.name ~= BASE_NAME and owner and #owner > #dir and is_path_subdir_of(path, owner))
+end
+
+local guard_installed = false
+
+--- vim.lsp.enable() attaches the shared "clangd" client to every C/C++ buffer on FileType,
+--- also to buffers that are already served by a "clangd_<wd>" client (:edit, a file that is
+--- opened later in the same directory). Such a buffer would have two clangd clients, so the
+--- shared one is swapped for the per-directory client as soon as it attaches.
+--- Installed on the first reload, per-directory clients do not exist before.
+local function ensure_guard()
+	if guard_installed then
 		return
 	end
+	guard_installed = true
 
-	-- Setup the compilation database path
-	selection = selection:gsub("%.%.%.", vim.fn.getcwd())
-	clangConfig.init_options = {compilationDatabasePath = selection}
+	vim.api.nvim_create_autocmd("LspAttach", {
+		group = vim.api.nvim_create_augroup("reloader.nvim.per_wd", { clear = true }),
+		callback = function(args)
+			local client = vim.lsp.get_client_by_id(args.data.client_id)
+			if not client or client.name ~= BASE_NAME then
+				return
+			end
 
-	-- Remove any existing query driver argument
-	local idx = find_query_driver_arg(clangConfig.cmd)
-	if idx ~= nil then
-		table.remove(clangConfig.cmd, idx)
+			local buf = args.buf
+			local target_lsp = find_target_lsp(buf)
+			if not target_lsp then
+				return
+			end
+
+			vim.schedule(function()
+				if not vim.api.nvim_buf_is_valid(buf) then
+					return
+				end
+
+				vim.lsp.buf_detach_client(buf, client.id)
+				vim.lsp.buf_attach_client(buf, target_lsp.id)
+
+				local remaining = 0
+				for b in pairs(client.attached_buffers) do
+					if b ~= buf and vim.api.nvim_buf_is_valid(b) then
+						remaining = remaining + 1
+					end
+				end
+				if remaining == 0 and not client:is_stopped() then
+					client:stop()
+				end
+			end)
+		end,
+	})
+end
+
+--- Gives the working directory of a buffer its own clangd client "clangd_<wd>" that uses
+--- the selected compilation database:
+---  1. every buffer with the same working directory is detached from the other clangd
+---     clients (a previous "clangd_<wd>" is replaced),
+---  2. clangd clients that end up without buffers are stopped,
+---  3. the new client is started and the buffers are attached to it.
+--- Buffers of other working directories keep their clients.
+---@param selection string Directory containing compile_commands.json ("..." stands for cwd).
+---@param bufnr? integer Buffer that is reloaded. Defaults to the current buffer.
+---@param cwd? string Working directory of that buffer. Defaults to the current cwd.
+function M.handle_direct_choise(selection, bufnr, cwd)
+	if bufnr == nil or bufnr == 0 then
+		bufnr = vim.api.nvim_get_current_buf()
 	end
+	cwd = normalize(cwd or vim.fn.getcwd())
 
-	-- Setup the query drivers
-	if selection:sub(#selection) == "/" then
-		selection = selection:sub(1, #selection - 1)
-	end
-
-	if not vim.fn.filereadable(selection .. "/compile_commands.json") then
-		vim.notify("The compile_commands.json file was found.", vim.log.levels.INFO)
-		return
-	end
+	-- Expand the shortened path and drop the trailing slash
+	selection = selection:gsub("^%.%.%.", function() return cwd end)
+	selection = selection:gsub("/+$", "")
 
 	local file = selection .. "/compile_commands.json"
-
 	if vim.fn.filereadable(file) == 0 then
 		vim.notify("The compilation database file does not exist: " .. file, vim.log.levels.ERROR)
-		return nil
-	end
-
-	local mappings = require("clang_reloader.mappings")
-	local drivers = mappings.get_query_drivers(file)
-	if drivers then
-		table.insert(clangConfig.cmd, drivers)
-	end
-
-	local attached_buffers = vim.lsp.get_clients({name="clangd"})[1].attached_buffers
-
-	-- Update the configuration with the user configuration
-	vim.lsp.config("clangd", clangConfig)
-
-	for _, client in ipairs(M.get_clients()) do
-		client:stop()
-	end
-
-	local client_id = vim.lsp.start(vim.lsp.config["clangd"])
-	if client_id == nil then
-		vim.notify("Failed to start clangd client", vim.log.levels.ERROR)
 		return
 	end
 
-	for bufnr, _ in pairs(attached_buffers) do
-		vim.lsp.buf_attach_client(bufnr, client_id)
+	-- Private copy of the base configuration, the registered one is never modified
+	local base = vim.lsp.config[BASE_NAME]
+	if not base or not base.cmd then
+		vim.notify("'" .. BASE_NAME .. "' LSP configuration not found in vim.lsp.config", vim.log.levels.ERROR)
+		return
 	end
+	local cfg = vim.deepcopy(base)
+
+	local new_lsp_name = client_name(cwd)
+	cfg.name = new_lsp_name
+	cfg.root_markers = nil
+	cfg.root_dir = vim.fs.root(bufnr, require("clang_reloader.config"):instance().root_markers) or cwd
+	cfg.cmd_cwd = cwd
+	cfg.init_options = vim.tbl_extend("force", cfg.init_options or {}, {
+		compilationDatabasePath = selection,
+	})
+
+	-- Replace the query driver argument
+	if type(cfg.cmd) == "table" then
+		local idx = find_query_driver_arg(cfg.cmd)
+		if idx ~= nil then
+			table.remove(cfg.cmd, idx)
+		end
+
+		local drivers = require("clang_reloader.mappings").get_query_drivers(file)
+		if drivers then
+			table.insert(cfg.cmd, drivers)
+		end
+	end
+
+	-- Collect the buffers of this working directory and the clients they are attached to.
+	-- A previous client of this directory is replaced, so all of its buffers move.
+	local to_attach = { [bufnr] = true }
+	local moves = {}
+
+	for _, client in ipairs(M.get_clients()) do
+		local move, remaining = {}, 0
+		for buf in pairs(client.attached_buffers) do
+			if not vim.api.nvim_buf_is_valid(buf) then
+				goto continue
+			end
+
+			if client.name == new_lsp_name
+				or buf == bufnr
+				or buf_wd(buf, bufnr, cwd) == cwd
+				or belongs_by_path(buf, client, cwd)
+			then
+				table.insert(move, buf)
+				to_attach[buf] = true
+			else
+				remaining = remaining + 1
+			end
+
+			::continue::
+		end
+		table.insert(moves, { client = client, move = move, remaining = remaining })
+	end
+
+	-- Start the new client first, so a failure leaves the old clients running.
+	-- reuse_client is disabled, a replaced client has the same name and root_dir.
+	local client_id = vim.lsp.start(cfg, {
+		attach = false,
+		reuse_client = function()
+			return false
+		end,
+	})
+	if client_id == nil then
+		vim.notify("Failed to start clangd client " .. new_lsp_name, vim.log.levels.ERROR)
+		return
+	end
+
+	ensure_guard()
+
+	for _, m in ipairs(moves) do
+		for _, buf in ipairs(m.move) do
+			vim.lsp.buf_detach_client(buf, m.client.id)
+		end
+	end
+
+	local count = 0
+	for buf in pairs(to_attach) do
+		if vim.api.nvim_buf_is_valid(buf) then
+			vim.lsp.buf_attach_client(buf, client_id)
+			count = count + 1
+		end
+	end
+
+	-- Stop the clients that no longer serve any buffer
+	for _, m in ipairs(moves) do
+		if m.remaining == 0 and not m.client:is_stopped() then
+			m.client:stop()
+		end
+	end
+
+	vim.notify(("%s (root: %s): %d buffer%s attached"):format(new_lsp_name, cfg.root_dir, count, count == 1 and "" or "s"))
 end
 
 
 --- This encapsulates the current client api from nvim.
---- @return table The current client.
-function M.get_clients()
-	return vim.lsp.get_clients({name="clangd"})
+---@param bufnr? integer Only return clients attached to this buffer.
+---@return vim.lsp.Client[] The clangd clients ("clangd" and "clangd_*").
+function M.get_clients(bufnr)
+	local filter = bufnr and { bufnr = bufnr } or {}
+	return vim.tbl_filter(function(client)
+		return client.name == BASE_NAME or vim.startswith(client.name, BASE_NAME .. "_")
+	end, vim.lsp.get_clients(filter))
 end
 
 --- This encapsulates the current client api from nvim.
---- @return table The current client.
-function M.get_client()
-	return M.get_clients()[1]
+---@param bufnr? integer Only consider clients attached to this buffer.
+---@return vim.lsp.Client|nil The first clangd client.
+function M.get_client(bufnr)
+	return M.get_clients(bufnr)[1]
 end
 
 function M.shorten_path(path)
